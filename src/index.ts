@@ -2,6 +2,7 @@
 
 import { Command } from "commander";
 import { wakeup } from "./cli/wakeup";
+import { config } from "./cli/config";
 import { showBanner } from "./utils/banner";
 
 const program = new Command();
@@ -17,6 +18,13 @@ program
   .action(async () => {
     await showBanner();
     await wakeup();
-});
+  });
+
+program
+  .command("config")
+  .description("Configure Coalition (API keys, model settings)")
+  .action(async () => {
+    await config();
+  });
 
 program.parse();
