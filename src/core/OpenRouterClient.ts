@@ -46,7 +46,7 @@ export class OpenRouterClient {
   private model: string;
   private baseUrl = "https://openrouter.ai/api/v1";
 
-  constructor(apiKey: string, model: string = "anthropic/claude-3.5-sonnet") {
+  constructor(apiKey: string, model: string = "openrouter/free") {
     this.apiKey = apiKey;
     this.model = model;
   }

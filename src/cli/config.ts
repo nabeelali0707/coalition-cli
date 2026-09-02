@@ -63,7 +63,7 @@ export async function config(): Promise<void> {
       console.log(
         `  FIRECRAWL_API_KEY: ${env.FIRECRAWL_API_KEY ? chalk.green("✓ Set") : chalk.red("✗ Not set")}`
       );
-      console.log(`  DEFAULT_MODEL: ${env.DEFAULT_MODEL || "anthropic/claude-3.5-sonnet"}`);
+      console.log(`  DEFAULT_MODEL: ${env.DEFAULT_MODEL || "openrouter/free"}`);
       console.log();
       break;
     }
@@ -84,7 +84,7 @@ export async function config(): Promise<void> {
     case "set-model": {
       const model = await p.text({
         message: "Enter the default model slug:",
-        defaultValue: env.DEFAULT_MODEL || "anthropic/claude-3.5-sonnet",
+        defaultValue: env.DEFAULT_MODEL || "openrouter/free",
       });
 
       if (p.isCancel(model)) return;

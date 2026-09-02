@@ -45,7 +45,7 @@ Or create a `.env` file:
 ```env
 OPENROUTER_API_KEY=your_openrouter_api_key_here
 FIRECRAWL_API_KEY=your_firecrawl_api_key_here
-DEFAULT_MODEL=anthropic/claude-3.5-sonnet
+DEFAULT_MODEL=openrouter/free
 ```
 
 ### Usage

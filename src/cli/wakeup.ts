@@ -48,7 +48,7 @@ function loadEnv(): Record<string, string> {
 export async function wakeup(): Promise<void> {
   const env = loadEnv();
   const apiKey = env.OPENROUTER_API_KEY;
-  const model = env.DEFAULT_MODEL || "anthropic/claude-3.5-sonnet";
+  const model = env.DEFAULT_MODEL || "openrouter/free";
 
   if (!apiKey) {
     console.log(
