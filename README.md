@@ -1,128 +1,75 @@
 # Coalition — Autonomous Terminal AI Agent
 
-**Coalition** is a terminal-native autonomous AI agent that bridges LLM reasoning with real local file system and shell operations, using a staged "Overlay" system and an explicit human-approval flow so nothing touches disk without review.
+Coalition is a terminal-native AI agent that executes software engineering tasks using natural language. It bridges LLM reasoning with real file system and shell operations, using a staged Overlay system so nothing touches disk without human review.
 
-## Features
+## How It Works
 
-- 🤖 **AI-Powered Agent** — Natural language interface via OpenRouter (model-agnostic)
-- 🛡️ **Safety First** — All file changes staged in a virtual Overlay before disk writes
-- ✅ **Human Approval** — Review and approve/reject AI-suggested changes
-- 📁 **File Operations** — Read, write, edit, delete files with approval flow
-- 🔍 **Codebase Analysis** — Analyze project structure and search across files
-- 🐚 **Shell Execution** — Run shell commands with safety checks
-- 🌐 **Web Scraping** — Fetch and crawl web content via FireCrawl
-
-## Quick Start
-
-### Prerequisites
-
-- Node.js 18+
-- npm or yarn
-
-### Installation
-
-```bash
-# Clone the repository
-git clone https://github.com/nabeelali0707/coalition-cli.git
-cd coalition-cli
-
-# Install dependencies
-npm install
-
-# Build the project
-npm run build
+```
+User input (CLI)
+      ↓
+  Action Tracker     → Tracks task lifecycle (pending → planning → completed)
+      ↓
+  Agent (LLM)        → Decides which tools to call via OpenRouter
+      ↓
+  Tool Executor      → Routes to the correct tool
+      ↓
+  Overlay System     → Stages file changes in memory (no disk writes yet)
+      ↓
+  Approval Flow      → User reviews, approves, or rejects changes
+      ↓
+  Commit / Discard   → Changes applied only on approval
 ```
 
-### Configuration
+## Project Structure
 
-```bash
-# Set up your API keys
-coalition config
+```
+src/
+├── core/
+│   ├── ActionTracker.ts      # Task state machine
+│   ├── Agent.ts              # AI agent loop (LLM ↔ tools)
+│   ├── Overlay.ts            # Virtual file change staging
+│   ├── ToolExecutor.ts       # Tool registry & routing
+│   ├── ApprovalFlow.ts       # User approval UI
+│   ├── OpenRouterClient.ts   # LLM API client
+│   └── FireCrawlClient.ts    # Web scraping client
+├── tools/
+│   ├── fileSystem.ts         # Read, write, edit, delete files
+│   ├── shell.ts              # Shell command execution
+│   ├── codebaseAnalysis.ts   # Analyze & search codebase
+│   └── webScraping.ts        # Scrape & crawl web pages
+├── cli/
+│   ├── wakeup.ts             # Interactive session
+│   ├── run.ts                # One-shot task mode
+│   ├── config.ts             # API key management
+│   └── history.ts            # Task history viewer
+└── utils/
+    └── banner.ts             # CLI banner & branding
 ```
 
-Or create a `.env` file:
-
-```env
-OPENROUTER_API_KEY=your_openrouter_api_key_here
-FIRECRAWL_API_KEY=your_firecrawl_api_key_here
-DEFAULT_MODEL=openrouter/free
-```
-
-### Usage
-
-```bash
-# Boot the agent into an interactive session
-coalition wakeup
-
-# Configure settings
-coalition config
-```
-
-## Interactive Commands
-
-Once in the interactive session (`coalition wakeup`):
+## Commands
 
 | Command | Description |
 |---------|-------------|
-| `help` | Show available commands |
-| `quit` | Exit Coalition |
+| `coalition wakeup` | Start an interactive AI session |
+| `coalition run <task>` | Run a single task non-interactively |
+| `coalition config` | Set API keys and model settings |
+| `coalition history` | View past tasks |
 
-Or simply type any natural language request and the AI agent will help you!
-
-## Architecture
-
-```
-User input (CLI/prompt)
-        ↓
-   Action Tracker  ← tracks task lifecycle
-        ↓
-   Agent / LLM (via OpenRouter)  ← decides what tools to call
-        ↓
-   Tool Executor  ← routes to correct tool
-        ↓
-   Overlay System  ← stages file changes virtually
-        ↓
-   Approval Flow  ← user reviews staged changes
-        ↓
-   Commit to disk / Discard
-```
-
-## Tools
-
-| Tool | Approval Required | Description |
-|------|-------------------|-------------|
-| `read_file` | No | Read file contents |
-| `list_directory` | No | List directory contents |
-| `write_file` | **Yes** | Create or overwrite a file |
-| `edit_file` | **Yes** | Edit a file by replacing content |
-| `delete_file` | **Yes** | Delete a file |
-| `run_shell_command` | **Yes** | Execute a shell command |
-| `analyze_codebase` | No | Analyze project structure |
-| `search_codebase` | No | Search for patterns in files |
-| `scrape_url` | No | Scrape a web URL |
-| `crawl_site` | No | Crawl multiple pages |
-
-## Tech Stack
-
-- **Language:** TypeScript
-- **Runtime:** Node.js
-- **CLI:** Commander.js
-- **Interactive Prompts:** @clack/prompts
-- **Terminal Styling:** Chalk + Figlet
-- **LLM Provider:** OpenRouter (model-agnostic)
-- **Web Scraping:** FireCrawl
-
-## Development
+## Setup
 
 ```bash
-# Run in development mode
-npm run dev
-
-# Build for production
+git clone https://github.com/nabeelali0707/coalition-cli.git
+cd coalition-cli
+npm install
 npm run build
+npm link
+```
 
-# Type check
-npm run typecheck
+Get your free API key at [openrouter.ai](https://openrouter.ai), then:
+
+```bash
+coalition config
+coalition wakeup
 ```
 
 ## License
