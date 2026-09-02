@@ -10,7 +10,9 @@
     "build": "tsc",
     "dev": "ts-node src/index.ts",
     "start": "node dist/index.js",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "jest",
+    "test:coverage": "jest --coverage"
   },
   "keywords": [
     "ai",
@@ -23,15 +25,18 @@
   "license": "MIT",
   "dependencies": {
     "@clack/prompts": "^1.7.0",
-    "chalk": "^6.0.0",
+    "chalk": "^4.1.2",
     "commander": "^15.0.0",
     "dotenv": "^17.4.2",
     "figlet": "^1.11.4"
   },
   "devDependencies": {
     "@types/figlet": "^1.7.0",
+    "@types/jest": "^30.0.0",
     "@types/node": "^26.4.1",
+    "jest": "^30.5.1",
+    "ts-jest": "^29.4.12",
     "ts-node": "^10.9.2",
-    "typescript": "^7.0.2"
+    "typescript": "^6.0.3"
   }
 }
