@@ -1,0 +1,37 @@
+{
+  "name": "coalition",
+  "version": "0.1.0",
+  "description": "Coalition — Autonomous Terminal AI Agent",
+  "main": "dist/index.js",
+  "bin": {
+    "coalition": "dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "ts-node src/index.ts",
+    "start": "node dist/index.js",
+    "typecheck": "tsc --noEmit"
+  },
+  "keywords": [
+    "ai",
+    "agent",
+    "terminal",
+    "cli",
+    "openrouter"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@clack/prompts": "^1.7.0",
+    "chalk": "^6.0.0",
+    "commander": "^15.0.0",
+    "dotenv": "^17.4.2",
+    "figlet": "^1.11.4"
+  },
+  "devDependencies": {
+    "@types/figlet": "^1.7.0",
+    "@types/node": "^26.4.1",
+    "ts-node": "^10.9.2",
+    "typescript": "^7.0.2"
+  }
+}

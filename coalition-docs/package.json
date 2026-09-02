@@ -1,0 +1,13 @@
+{
+  "name": "coalition-docs",
+  "version": "1.0.0",
+  "description": "**Coalition** is a terminal-based autonomous AI agent, inspired by the OpenClaw project. It bridges LLM reasoning with real local file system and shell operations, using a staged \"Overlay\" system and an explicit human-approval flow so nothing touches disk without review.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs"
+}
