@@ -20,6 +20,8 @@ import {
   searchCodebaseTool,
 } from "../tools/codebaseAnalysis";
 import { shellCommandTool } from "../tools/shell";
+import { scrapeUrlTool, crawlSiteTool, setFireCrawlClient } from "../tools/webScraping";
+import { FireCrawlClient } from "../core/FireCrawlClient";
 
 function loadEnv(): Record<string, string> {
   const envPath = join(process.cwd(), ".env");
@@ -65,6 +67,13 @@ export async function wakeup(): Promise<void> {
     ? new OpenRouterClient(apiKey, model)
     : null;
 
+  // Initialize FireCrawl if API key is present
+  const firecrawlKey = env.FIRECRAWL_API_KEY;
+  if (firecrawlKey) {
+    const firecrawl = new FireCrawlClient(firecrawlKey);
+    setFireCrawlClient(firecrawl);
+  }
+
   // Register all tools
   toolExecutor.register(readFileTool);
   toolExecutor.register(listDirectoryTool);
@@ -74,6 +83,10 @@ export async function wakeup(): Promise<void> {
   toolExecutor.register(analyzeCodebaseTool);
   toolExecutor.register(searchCodebaseTool);
   toolExecutor.register(shellCommandTool);
+  if (firecrawlKey) {
+    toolExecutor.register(scrapeUrlTool);
+    toolExecutor.register(crawlSiteTool);
+  }
 
   console.log(
     chalk.gray(
