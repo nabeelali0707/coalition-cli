@@ -9,7 +9,7 @@ User input (CLI)
       ↓
   Action Tracker     → Tracks task lifecycle (pending → planning → completed)
       ↓
-  Agent (LLM)        → Decides which tools to call via OpenRouter
+  Agent (LLM)        → Decides which tools to call
       ↓
   Tool Executor      → Routes to the correct tool
       ↓
@@ -65,7 +65,7 @@ npm run build
 npm link
 ```
 
-Get your free API key at [openrouter.ai](https://openrouter.ai), then:
+Then configure your API keys:
 
 ```bash
 coalition config
