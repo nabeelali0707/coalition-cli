@@ -25,10 +25,12 @@
   "license": "MIT",
   "dependencies": {
     "@clack/prompts": "^1.7.0",
+    "boxen": "^8.0.1",
     "chalk": "^4.1.2",
     "commander": "^15.0.0",
     "dotenv": "^17.4.2",
-    "figlet": "^1.11.4"
+    "figlet": "^1.11.4",
+    "gradient-string": "^3.0.0"
   },
   "devDependencies": {
     "@types/figlet": "^1.7.0",
