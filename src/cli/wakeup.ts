@@ -72,7 +72,7 @@ export async function wakeup(): Promise<void> {
     } else {
       console.log(
         chalk.red(
-          "\n⚠️  OpenRouter API key not found. Run `coalition config` to set it up.\n"
+          "\n⚠️  No AI backend available. Run `coalition config` to set up OpenRouter or Ollama.\n"
         )
       );
       console.log(chalk.gray("Continuing in local mode (no AI)...\n"));
@@ -154,6 +154,12 @@ export async function wakeup(): Promise<void> {
       break;
     }
 
+    if (command === "config") {
+      const { config } = await import("./config");
+      await config();
+      continue;
+    }
+
     if (agent) {
       try {
         await agent.processUserInput(input);
@@ -208,9 +214,10 @@ async function handleLocalCommand(
     console.log(result.success ? chalk.white(result.output) : chalk.red(result.output));
     actionTracker.updateStatus(task.id, "completed");
   } else {
+    actionTracker.updateStatus(task.id, "in_progress");
     console.log(
       chalk.yellow(
-        '[Local mode] AI integration requires OpenRouter API key. Run "coalition config" to set it up.'
+        'Unknown command. Type "help" for available commands.'
       )
     );
     actionTracker.updateStatus(task.id, "completed");
