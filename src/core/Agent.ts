@@ -87,7 +87,9 @@ export class Agent {
       }
 
       if (choice.message.tool_calls && choice.message.tool_calls.length > 0) {
-        this.actionTracker.updateStatus(task.id, "in_progress");
+        if (task.status !== "in_progress") {
+          this.actionTracker.updateStatus(task.id, "in_progress");
+        }
 
         this.messages.push({
           role: "assistant",
@@ -99,6 +101,7 @@ export class Agent {
           await this.handleToolCall(task.id, toolCall);
         }
       } else {
+        this.actionTracker.updateStatus(task.id, "in_progress");
         break;
       }
     }
