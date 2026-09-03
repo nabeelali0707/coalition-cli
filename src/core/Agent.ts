@@ -7,7 +7,12 @@ import {
   OpenRouterClient,
   ChatMessage,
   ToolCall,
+  ToolDefinitionForLLM,
+  ChatCompletion,
 } from "./OpenRouterClient";
+import { OllamaClient } from "./OllamaClient";
+
+export type LLMClient = OpenRouterClient | OllamaClient;
 
 const SYSTEM_PROMPT = `You are Coalition, an autonomous terminal AI agent. You help users with software engineering tasks: fixing bugs, adding functionality, refactoring, and explaining code.
 
@@ -33,7 +38,7 @@ export class Agent {
   private toolExecutor: ToolExecutor;
   private overlay: Overlay;
   private approvalFlow: ApprovalFlow;
-  private openRouter: OpenRouterClient;
+  private llm: LLMClient;
   private messages: ChatMessage[] = [];
 
   constructor(
@@ -41,13 +46,13 @@ export class Agent {
     toolExecutor: ToolExecutor,
     overlay: Overlay,
     approvalFlow: ApprovalFlow,
-    openRouter: OpenRouterClient
+    llm: LLMClient
   ) {
     this.actionTracker = actionTracker;
     this.toolExecutor = toolExecutor;
     this.overlay = overlay;
     this.approvalFlow = approvalFlow;
-    this.openRouter = openRouter;
+    this.llm = llm;
 
     this.messages.push({ role: "system", content: SYSTEM_PROMPT });
   }
@@ -61,7 +66,7 @@ export class Agent {
     console.log(chalk.gray(`[Task ${task.id.slice(0, 8)}] Processing...`));
 
     const tools = this.toolExecutor.getToolDefinitions();
-    const llmTools = this.openRouter.formatToolDefinitions(tools);
+    const llmTools = this.llm.formatToolDefinitions(tools);
 
     let maxIterations = 10;
 
@@ -70,7 +75,7 @@ export class Agent {
 
       console.log(chalk.gray("[Coalition] Thinking..."));
 
-      const completion = await this.openRouter.chat(this.messages, llmTools);
+      const completion = await this.llm.chat(this.messages, llmTools);
       const choice = completion.choices[0];
 
       if (choice.message.content) {

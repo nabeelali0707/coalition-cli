@@ -6,7 +6,8 @@ import { ToolExecutor } from "../core/ToolExecutor";
 import { Overlay } from "../core/Overlay";
 import { ApprovalFlow } from "../core/ApprovalFlow";
 import { OpenRouterClient } from "../core/OpenRouterClient";
-import { Agent } from "../core/Agent";
+import { OllamaClient } from "../core/OllamaClient";
+import { Agent, LLMClient } from "../core/Agent";
 import {
   readFileTool,
   listDirectoryTool,
@@ -48,21 +49,35 @@ export async function run(taskDescription: string): Promise<void> {
   const env = loadEnv();
   const apiKey = env.OPENROUTER_API_KEY;
   const model = env.DEFAULT_MODEL || "openrouter/free";
+  const backend = env.LLM_BACKEND || "openrouter";
+  const ollamaModel = env.OLLAMA_MODEL || "qwen2.5-coder:7b";
 
-  if (!apiKey) {
-    console.log(
-      chalk.red(
-        "Error: OpenRouter API key required for one-shot mode.\nRun `coalition config` to set it up."
-      )
-    );
-    process.exit(1);
+  let llm: LLMClient;
+
+  if (backend === "ollama") {
+    const ollama = new OllamaClient(ollamaModel);
+    const available = await ollama.isAvailable();
+    if (!available) {
+      console.log(chalk.red("Error: Ollama is not running. Start it with `ollama serve`."));
+      process.exit(1);
+    }
+    llm = ollama;
+  } else {
+    if (!apiKey) {
+      console.log(
+        chalk.red(
+          "Error: OpenRouter API key required for one-shot mode.\nRun `coalition config` to set it up."
+        )
+      );
+      process.exit(1);
+    }
+    llm = new OpenRouterClient(apiKey, model);
   }
 
   const actionTracker = new ActionTracker();
   const overlay = new Overlay();
   const toolExecutor = new ToolExecutor(overlay);
   const approvalFlow = new ApprovalFlow(overlay);
-  const openRouter = new OpenRouterClient(apiKey, model);
 
   // Initialize FireCrawl if API key is present
   const firecrawlKey = env.FIRECRAWL_API_KEY;
@@ -90,11 +105,11 @@ export async function run(taskDescription: string): Promise<void> {
     toolExecutor,
     overlay,
     approvalFlow,
-    openRouter
+    llm
   );
 
   console.log(chalk.gray(`Task: ${taskDescription}`));
-  console.log(chalk.gray(`Model: ${model}\n`));
+  console.log(chalk.gray(`Backend: ${backend} | Model: ${backend === "ollama" ? ollamaModel : model}\n`));
 
   try {
     await agent.processUserInput(taskDescription);

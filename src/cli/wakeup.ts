@@ -7,7 +7,8 @@ import { ToolExecutor } from "../core/ToolExecutor";
 import { Overlay } from "../core/Overlay";
 import { ApprovalFlow } from "../core/ApprovalFlow";
 import { OpenRouterClient } from "../core/OpenRouterClient";
-import { Agent } from "../core/Agent";
+import { OllamaClient } from "../core/OllamaClient";
+import { Agent, LLMClient } from "../core/Agent";
 import {
   readFileTool,
   listDirectoryTool,
@@ -49,23 +50,39 @@ export async function wakeup(): Promise<void> {
   const env = loadEnv();
   const apiKey = env.OPENROUTER_API_KEY;
   const model = env.DEFAULT_MODEL || "openrouter/free";
+  const backend = env.LLM_BACKEND || "openrouter";
+  const ollamaModel = env.OLLAMA_MODEL || "qwen2.5-coder:7b";
 
-  if (!apiKey) {
-    console.log(
-      chalk.red(
-        "\n⚠️  OpenRouter API key not found. Run `coalition config` to set it up.\n"
-      )
-    );
-    console.log(chalk.gray("Continuing in local mode (no AI)...\n"));
+  let llm: LLMClient | null = null;
+
+  if (backend === "ollama") {
+    const ollama = new OllamaClient(ollamaModel);
+    const available = await ollama.isAvailable();
+    if (available) {
+      llm = ollama;
+      console.log(chalk.gray(`Backend: Ollama (${ollamaModel})`));
+    } else {
+      console.log(chalk.red("\n⚠️  Ollama is not running. Start it with `ollama serve`.\n"));
+      console.log(chalk.gray("Falling back to local mode (no AI)...\n"));
+    }
+  } else {
+    if (apiKey) {
+      llm = new OpenRouterClient(apiKey, model);
+      console.log(chalk.gray(`Backend: OpenRouter (${model})`));
+    } else {
+      console.log(
+        chalk.red(
+          "\n⚠️  OpenRouter API key not found. Run `coalition config` to set it up.\n"
+        )
+      );
+      console.log(chalk.gray("Continuing in local mode (no AI)...\n"));
+    }
   }
 
   const actionTracker = new ActionTracker();
   const overlay = new Overlay();
   const toolExecutor = new ToolExecutor(overlay);
   const approvalFlow = new ApprovalFlow(overlay);
-  const openRouter = apiKey
-    ? new OpenRouterClient(apiKey, model)
-    : null;
 
   // Initialize FireCrawl if API key is present
   const firecrawlKey = env.FIRECRAWL_API_KEY;
@@ -94,19 +111,19 @@ export async function wakeup(): Promise<void> {
     )
   );
 
-  if (openRouter) {
-    console.log(chalk.gray(`Model: ${model}`));
+  if (llm) {
+    console.log(chalk.gray(`Model: ${llm.getModel()}`));
   }
 
   console.log();
 
-  const agent = openRouter
+  const agent = llm
     ? new Agent(
         actionTracker,
         toolExecutor,
         overlay,
         approvalFlow,
-        openRouter
+        llm
       )
     : null;
 
