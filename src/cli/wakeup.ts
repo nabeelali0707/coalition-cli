@@ -54,25 +54,23 @@ export async function wakeup(): Promise<void> {
 
   let llm: LLMClient | null = null;
 
-  // Try OpenRouter first (primary)
-  if (apiKey) {
+  // Try Ollama first (primary - local, private, free)
+  const ollama = new OllamaClient(ollamaModel);
+  const ollamaAvailable = await ollama.isAvailable();
+  if (ollamaAvailable) {
+    llm = ollama;
+    console.log(chalk.gray(`Backend: Ollama (${ollamaModel})`));
+  } else if (apiKey) {
+    // Fallback to OpenRouter
     llm = new OpenRouterClient(apiKey, model);
-    console.log(chalk.gray(`Backend: OpenRouter (${model})`));
+    console.log(chalk.gray(`Backend: OpenRouter (${model}) (fallback)`));
   } else {
-    // Fallback to Ollama
-    const ollama = new OllamaClient(ollamaModel);
-    const available = await ollama.isAvailable();
-    if (available) {
-      llm = ollama;
-      console.log(chalk.gray(`Backend: Ollama (${ollamaModel}) (fallback)`));
-    } else {
-      console.log(
-        chalk.red(
-          "\n⚠️  No AI backend available.\n"
-        )
-      );
-      console.log(chalk.gray("Set OPENROUTER_API_KEY or start Ollama with `ollama serve`.\n"));
-    }
+    console.log(
+      chalk.red(
+        "\n⚠️  No AI backend available.\n"
+      )
+    );
+    console.log(chalk.gray("Start Ollama with `ollama serve` or set OPENROUTER_API_KEY.\n"));
   }
 
   const actionTracker = new ActionTracker();

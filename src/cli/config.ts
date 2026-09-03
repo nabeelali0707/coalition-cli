@@ -43,9 +43,9 @@ export async function config(): Promise<void> {
     message: "What would you like to configure?",
     options: [
       { value: "view", label: "View current configuration" },
-      { value: "set-key", label: "Set OpenRouter API key (primary)" },
+      { value: "set-key", label: "Set OpenRouter API key (fallback)" },
       { value: "set-model", label: "Set OpenRouter model" },
-      { value: "set-ollama-model", label: "Set Ollama model (fallback)" },
+      { value: "set-ollama-model", label: "Set Ollama model (primary)" },
       { value: "set", label: "Set a custom configuration value" },
       { value: "exit", label: "Exit" },
     ],
@@ -58,7 +58,7 @@ export async function config(): Promise<void> {
   switch (action) {
     case "view": {
       console.log(chalk.gray("\nCurrent configuration:"));
-      console.log(chalk.gray("  Priority: OpenRouter (primary) → Ollama (fallback)"));
+      console.log(chalk.gray("  Priority: Ollama (primary) → OpenRouter (fallback)"));
       console.log(
         `  OPENROUTER_API_KEY: ${env.OPENROUTER_API_KEY ? chalk.green("✓ Set") : chalk.red("✗ Not set")}`
       );
@@ -73,7 +73,7 @@ export async function config(): Promise<void> {
 
     case "set-ollama-model": {
       const model = await p.text({
-        message: "Enter the Ollama model name (used when OpenRouter is unavailable):",
+        message: "Enter the Ollama model name (primary backend):",
         defaultValue: env.OLLAMA_MODEL || "deepseek-coder:6.7b",
       });
 
