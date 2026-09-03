@@ -49,29 +49,24 @@ export async function run(taskDescription: string): Promise<void> {
   const env = loadEnv();
   const apiKey = env.OPENROUTER_API_KEY;
   const model = env.DEFAULT_MODEL || "openrouter/free";
-  const backend = env.LLM_BACKEND || "openrouter";
-  const ollamaModel = env.OLLAMA_MODEL || "qwen2.5-coder:7b";
+  const ollamaModel = env.OLLAMA_MODEL || "deepseek-coder:6.7b";
 
   let llm: LLMClient;
 
-  if (backend === "ollama") {
+  // Try OpenRouter first (primary)
+  if (apiKey) {
+    llm = new OpenRouterClient(apiKey, model);
+  } else {
+    // Fallback to Ollama
     const ollama = new OllamaClient(ollamaModel);
     const available = await ollama.isAvailable();
     if (!available) {
-      console.log(chalk.red("Error: Ollama is not running. Start it with `ollama serve`."));
+      console.log(chalk.red("Error: No AI backend available."));
+      console.log(chalk.gray("Set OPENROUTER_API_KEY or start Ollama with `ollama serve`."));
       process.exit(1);
     }
     llm = ollama;
-  } else {
-    if (!apiKey) {
-      console.log(
-        chalk.red(
-          "Error: OpenRouter API key required for one-shot mode.\nRun `coalition config` to set it up."
-        )
-      );
-      process.exit(1);
-    }
-    llm = new OpenRouterClient(apiKey, model);
+    console.log(chalk.gray(`OpenRouter not available, falling back to Ollama (${ollamaModel})`));
   }
 
   const actionTracker = new ActionTracker();
@@ -109,7 +104,7 @@ export async function run(taskDescription: string): Promise<void> {
   );
 
   console.log(chalk.gray(`Task: ${taskDescription}`));
-  console.log(chalk.gray(`Backend: ${backend} | Model: ${backend === "ollama" ? ollamaModel : model}\n`));
+  console.log(chalk.gray(`Model: ${llm.getModel()}\n`));
 
   try {
     await agent.processUserInput(taskDescription);

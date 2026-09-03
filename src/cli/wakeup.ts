@@ -50,32 +50,28 @@ export async function wakeup(): Promise<void> {
   const env = loadEnv();
   const apiKey = env.OPENROUTER_API_KEY;
   const model = env.DEFAULT_MODEL || "openrouter/free";
-  const backend = env.LLM_BACKEND || "openrouter";
-  const ollamaModel = env.OLLAMA_MODEL || "qwen2.5-coder:7b";
+  const ollamaModel = env.OLLAMA_MODEL || "deepseek-coder:6.7b";
 
   let llm: LLMClient | null = null;
 
-  if (backend === "ollama") {
+  // Try OpenRouter first (primary)
+  if (apiKey) {
+    llm = new OpenRouterClient(apiKey, model);
+    console.log(chalk.gray(`Backend: OpenRouter (${model})`));
+  } else {
+    // Fallback to Ollama
     const ollama = new OllamaClient(ollamaModel);
     const available = await ollama.isAvailable();
     if (available) {
       llm = ollama;
-      console.log(chalk.gray(`Backend: Ollama (${ollamaModel})`));
-    } else {
-      console.log(chalk.red("\n⚠️  Ollama is not running. Start it with `ollama serve`.\n"));
-      console.log(chalk.gray("Falling back to local mode (no AI)...\n"));
-    }
-  } else {
-    if (apiKey) {
-      llm = new OpenRouterClient(apiKey, model);
-      console.log(chalk.gray(`Backend: OpenRouter (${model})`));
+      console.log(chalk.gray(`Backend: Ollama (${ollamaModel}) (fallback)`));
     } else {
       console.log(
         chalk.red(
-          "\n⚠️  No AI backend available. Run `coalition config` to set up OpenRouter or Ollama.\n"
+          "\n⚠️  No AI backend available.\n"
         )
       );
-      console.log(chalk.gray("Continuing in local mode (no AI)...\n"));
+      console.log(chalk.gray("Set OPENROUTER_API_KEY or start Ollama with `ollama serve`.\n"));
     }
   }
 

@@ -43,10 +43,9 @@ export async function config(): Promise<void> {
     message: "What would you like to configure?",
     options: [
       { value: "view", label: "View current configuration" },
-      { value: "set-backend", label: "Set LLM backend (OpenRouter or Ollama)" },
-      { value: "set-key", label: "Set OpenRouter API key" },
-      { value: "set-model", label: "Set OpenRouter default model" },
-      { value: "set-ollama-model", label: "Set Ollama model" },
+      { value: "set-key", label: "Set OpenRouter API key (primary)" },
+      { value: "set-model", label: "Set OpenRouter model" },
+      { value: "set-ollama-model", label: "Set Ollama model (fallback)" },
       { value: "set", label: "Set a custom configuration value" },
       { value: "exit", label: "Exit" },
     ],
@@ -59,12 +58,12 @@ export async function config(): Promise<void> {
   switch (action) {
     case "view": {
       console.log(chalk.gray("\nCurrent configuration:"));
-      console.log(`  LLM_BACKEND: ${chalk.cyan(env.LLM_BACKEND || "openrouter")}`);
+      console.log(chalk.gray("  Priority: OpenRouter (primary) → Ollama (fallback)"));
       console.log(
         `  OPENROUTER_API_KEY: ${env.OPENROUTER_API_KEY ? chalk.green("✓ Set") : chalk.red("✗ Not set")}`
       );
       console.log(`  DEFAULT_MODEL: ${chalk.cyan(env.DEFAULT_MODEL || "openrouter/free")}`);
-      console.log(`  OLLAMA_MODEL: ${chalk.cyan(env.OLLAMA_MODEL || "qwen2.5-coder:7b")}`);
+      console.log(`  OLLAMA_MODEL: ${chalk.cyan(env.OLLAMA_MODEL || "deepseek-coder:6.7b")}`);
       console.log(
         `  FIRECRAWL_API_KEY: ${env.FIRECRAWL_API_KEY ? chalk.green("✓ Set") : chalk.red("✗ Not set")}`
       );
@@ -72,27 +71,10 @@ export async function config(): Promise<void> {
       break;
     }
 
-    case "set-backend": {
-      const backend = await p.select({
-        message: "Select LLM backend:",
-        options: [
-          { value: "openrouter", label: "OpenRouter (cloud, requires API key)" },
-          { value: "ollama", label: "Ollama (local, requires ollama running)" },
-        ],
-      });
-
-      if (p.isCancel(backend)) return;
-
-      env.LLM_BACKEND = backend;
-      saveEnv(env);
-      console.log(chalk.green(`✓ Backend set to: ${backend}`));
-      break;
-    }
-
     case "set-ollama-model": {
       const model = await p.text({
-        message: "Enter the Ollama model name:",
-        defaultValue: env.OLLAMA_MODEL || "qwen2.5-coder:7b",
+        message: "Enter the Ollama model name (used when OpenRouter is unavailable):",
+        defaultValue: env.OLLAMA_MODEL || "deepseek-coder:6.7b",
       });
 
       if (p.isCancel(model)) return;
