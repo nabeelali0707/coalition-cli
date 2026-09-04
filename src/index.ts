@@ -5,6 +5,7 @@ import { wakeup } from "./cli/wakeup";
 import { config } from "./cli/config";
 import { run } from "./cli/run";
 import { printHistory, getHistory } from "./cli/history";
+import { status } from "./cli/status";
 import { showBanner } from "./utils/banner";
 
 const program = new Command();
@@ -34,6 +35,13 @@ program
   .description("Configure Coalition (API keys, model settings)")
   .action(async () => {
     await config();
+  });
+
+program
+  .command("status")
+  .description("Show backend health and configuration")
+  .action(async () => {
+    await status();
   });
 
 program
