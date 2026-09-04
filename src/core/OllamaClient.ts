@@ -6,6 +6,11 @@ import {
   ChatCompletion,
 } from "./OpenRouterClient";
 
+export interface StreamCallbacks {
+  onToken?: (token: string) => void;
+  onComplete?: (fullText: string) => void;
+}
+
 export class OllamaClient {
   private model: string;
   private baseUrl: string;
@@ -29,7 +34,6 @@ export class OllamaClient {
     messages: ChatMessage[],
     tools?: ToolDefinitionForLLM[]
   ): Promise<ChatCompletion> {
-    // Try native tool calling first, fall back to text-based if not supported
     if (tools && tools.length > 0) {
       try {
         return await this.chatWithTools(messages, tools);
@@ -45,6 +49,98 @@ export class OllamaClient {
     }
 
     return await this.chatSimple(messages);
+  }
+
+  async chatStream(
+    messages: ChatMessage[],
+    tools?: ToolDefinitionForLLM[],
+    callbacks?: StreamCallbacks
+  ): Promise<ChatCompletion> {
+    // Try native tool calling first (non-streaming to detect tool calls)
+    if (tools && tools.length > 0 && this.supportsTools !== false) {
+      try {
+        return await this.chatWithTools(messages, tools);
+      } catch (error) {
+        const errMsg = error instanceof Error ? error.message : String(error);
+        if (errMsg.includes("does not support tools")) {
+          this.supportsTools = false;
+        }
+        // Fall through to streaming
+      }
+    }
+
+    // Stream the response
+    const body: Record<string, unknown> = {
+      model: this.model,
+      messages,
+      stream: true,
+    };
+
+    const response = await fetch(`${this.baseUrl}/v1/chat/completions`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Ollama API error (${response.status}): ${errorText}`);
+    }
+
+    let fullContent = "";
+    const reader = response.body?.getReader();
+    const decoder = new TextDecoder();
+
+    if (reader) {
+      let buffer = "";
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() || "";
+
+        for (const line of lines) {
+          if (line.startsWith("data: ")) {
+            const jsonStr = line.slice(6).trim();
+            if (jsonStr === "[DONE]") continue;
+            try {
+              const chunk = JSON.parse(jsonStr);
+              const token = chunk.choices?.[0]?.delta?.content || "";
+              if (token) {
+                fullContent += token;
+                callbacks?.onToken?.(token);
+              }
+            } catch {
+              // Skip invalid JSON
+            }
+          }
+        }
+      }
+    }
+
+    callbacks?.onComplete?.(fullContent);
+
+    // If text contains tool calls, parse them
+    if (tools && tools.length > 0) {
+      const toolCalls = this.parseTextToolCalls(fullContent);
+      if (toolCalls.length > 0) {
+        return {
+          choices: [{
+            message: { role: "assistant", content: null, tool_calls: toolCalls },
+            finish_reason: "tool_calls",
+          }],
+        };
+      }
+    }
+
+    return {
+      choices: [{
+        message: { role: "assistant", content: fullContent },
+        finish_reason: "stop",
+      }],
+    };
   }
 
   private async chatWithTools(
@@ -98,28 +194,21 @@ export class OllamaClient {
     messages: ChatMessage[],
     tools: ToolDefinitionForLLM[]
   ): Promise<ChatCompletion> {
-    // Build a tool prompt that instructs the model to output JSON tool calls
     const toolDescriptions = tools.map((t) => {
       const params = JSON.stringify(t.function.parameters, null, 2);
       return `### ${t.function.name}\n${t.function.description}\nParameters:\n${params}`;
     }).join("\n\n");
 
     const toolPrompt = `
-You have access to the following tools. To use a tool, output EXACTLY this format (no other text around it):
+To use a tool, output EXACTLY this JSON (nothing else):
+{"name": "tool_name", "arguments": {"param1": "value1"}}
 
-\`\`\`json
-{"tool": "tool_name", "args": {"param1": "value1"}}
-\`\`\`
-
-IMPORTANT: Always use "." as the path when the user asks about the current project/directory. Never use placeholder paths like "/path/to/...".
-
-If you don't need to use a tool, just respond normally.
+Always use "." for current directory. Never use placeholder paths.
 
 Available tools:
 ${toolDescriptions}
 `;
 
-    // Inject tool prompt into system message
     const enhancedMessages = messages.map((m, i) => {
       if (i === 0 && m.role === "system") {
         return { ...m, content: m.content + "\n\n" + toolPrompt };
@@ -130,18 +219,12 @@ ${toolDescriptions}
     const result = await this.chatSimple(enhancedMessages);
     const choice = result.choices[0];
 
-    // Try to parse tool calls from the response
     if (choice.message.content) {
-      const toolCalls = this.parseToolCalls(choice.message.content);
+      const toolCalls = this.parseTextToolCalls(choice.message.content);
       if (toolCalls.length > 0) {
-        // Return with tool calls parsed from text
         return {
           choices: [{
-            message: {
-              role: "assistant",
-              content: null,
-              tool_calls: toolCalls,
-            },
+            message: { role: "assistant", content: null, tool_calls: toolCalls },
             finish_reason: "tool_calls",
           }],
           usage: result.usage,
@@ -152,53 +235,33 @@ ${toolDescriptions}
     return result;
   }
 
-  private parseToolCalls(content: string): ToolCall[] {
+  parseTextToolCalls(content: string): ToolCall[] {
     const toolCalls: ToolCall[] = [];
-
-    // Match ```json\n{...}\n``` blocks
-    const jsonBlockRegex = /```json\s*(\{[\s\S]*?\})\s*```/g;
+    // Match {"name": "...", "arguments": {...}} pattern
+    const regex = /\{\s*"name"\s*:\s*"([^"]+)"\s*,\s*"arguments"\s*:\s*(\{[^}]*\})\s*\}/g;
     let match;
-
-    while ((match = jsonBlockRegex.exec(content)) !== null) {
-      try {
-        const parsed = JSON.parse(match[1]);
-        if (parsed.tool && parsed.args) {
-          toolCalls.push({
-            id: `text-${Date.now()}-${toolCalls.length}`,
-            type: "function",
-            function: {
-              name: parsed.tool,
-              arguments: JSON.stringify(parsed.args),
-            },
-          });
-        }
-      } catch {
-        // Skip invalid JSON
-      }
+    while ((match = regex.exec(content)) !== null) {
+      toolCalls.push({
+        id: `text-${Date.now()}-${toolCalls.length}`,
+        type: "function",
+        function: {
+          name: match[1],
+          arguments: match[2],
+        },
+      });
     }
-
-    // Also try to find JSON objects without code blocks
-    if (toolCalls.length === 0) {
-      const jsonRegex = /\{"tool":\s*"[^"]+",\s*"args":\s*\{[^}]*\}\}/g;
-      while ((match = jsonRegex.exec(content)) !== null) {
-        try {
-          const parsed = JSON.parse(match[0]);
-          if (parsed.tool && parsed.args) {
-            toolCalls.push({
-              id: `text-${Date.now()}-${toolCalls.length}`,
-              type: "function",
-              function: {
-                name: parsed.tool,
-                arguments: JSON.stringify(parsed.args),
-              },
-            });
-          }
-        } catch {
-          // Skip invalid JSON
-        }
-      }
+    // Also match the reverse order: {"arguments": {...}, "name": "..."}
+    const regex2 = /\{\s*"arguments"\s*:\s*(\{[^}]*\})\s*,\s*"name"\s*:\s*"([^"]+)"\s*\}/g;
+    while ((match = regex2.exec(content)) !== null) {
+      toolCalls.push({
+        id: `text-${Date.now()}-${toolCalls.length}`,
+        type: "function",
+        function: {
+          name: match[2],
+          arguments: match[1],
+        },
+      });
     }
-
     return toolCalls;
   }
 

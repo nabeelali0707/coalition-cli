@@ -116,6 +116,9 @@ export async function wakeup(): Promise<void> {
     if (command === "help") {
       console.log(chalk.cyan("\nAvailable commands:"));
       console.log("  help              - Show this help");
+      console.log("  status            - Show backend and tool info");
+      console.log("  tools             - List available tools");
+      console.log("  clear             - Clear the screen");
       console.log("  quit              - Exit Coalition");
       console.log("\nOr type any natural language request for the AI agent.\n");
       continue;
@@ -124,6 +127,28 @@ export async function wakeup(): Promise<void> {
     if (command === "quit" || command === "exit") {
       console.log(chalk.yellow("Coalition going back to sleep. Goodbye!"));
       break;
+    }
+
+    if (command === "clear") {
+      console.clear();
+      continue;
+    }
+
+    if (command === "status") {
+      const { status } = await import("./status");
+      await status();
+      continue;
+    }
+
+    if (command === "tools") {
+      const tools = toolExecutor.getAllTools();
+      console.log(chalk.cyan(`\nAvailable tools (${tools.length}):\n`));
+      for (const tool of tools) {
+        const req = tool.requiresApproval ? chalk.yellow(" (requires approval)") : "";
+        console.log(`  ${chalk.bold(tool.name)}${req}`);
+        console.log(chalk.gray(`    ${tool.description}\n`));
+      }
+      continue;
     }
 
     if (command === "config") {

@@ -14,6 +14,10 @@ import { OllamaClient } from "./OllamaClient";
 
 export type LLMClient = OpenRouterClient | OllamaClient;
 
+function isOllama(client: LLMClient): client is OllamaClient {
+  return client instanceof OllamaClient;
+}
+
 const SYSTEM_PROMPT = `You are Coalition, a coding assistant. Be concise. Use tools when needed.`;
 
 export class Agent {
@@ -56,9 +60,20 @@ export class Agent {
     while (maxIterations > 0) {
       maxIterations--;
 
-      console.log(chalk.gray("[Coalition] Thinking..."));
+      process.stdout.write(chalk.gray("[Coalition] Thinking... "));
 
-      const completion = await this.llm.chat(this.messages, llmTools);
+      // Use streaming for Ollama for faster perceived response
+      let completion: ChatCompletion;
+      if (isOllama(this.llm)) {
+        completion = await this.llm.chatStream(this.messages, llmTools, {
+          onToken: (token) => {
+            process.stdout.write(chalk.cyan(token));
+          },
+        });
+        process.stdout.write("\n");
+      } else {
+        completion = await this.llm.chat(this.messages, llmTools);
+      }
       const choice = completion.choices[0];
 
       // Parse tool calls from native API or from text content
