@@ -1,6 +1,4 @@
 import chalk from "chalk";
-import { readFileSync, existsSync } from "fs";
-import { join } from "path";
 import { ActionTracker } from "../core/ActionTracker";
 import { ToolExecutor } from "../core/ToolExecutor";
 import { Overlay } from "../core/Overlay";
@@ -23,27 +21,7 @@ import { shellCommandTool } from "../tools/shell";
 import { scrapeUrlTool, crawlSiteTool, setFireCrawlClient } from "../tools/webScraping";
 import { FireCrawlClient } from "../core/FireCrawlClient";
 
-function loadEnv(): Record<string, string> {
-  const envPath = join(process.cwd(), ".env");
-  const env: Record<string, string> = {};
-
-  if (existsSync(envPath)) {
-    const content = readFileSync(envPath, "utf-8");
-    for (const line of content.split("\n")) {
-      const trimmed = line.trim();
-      if (trimmed && !trimmed.startsWith("#")) {
-        const eqIndex = trimmed.indexOf("=");
-        if (eqIndex > 0) {
-          const key = trimmed.slice(0, eqIndex).trim();
-          const value = trimmed.slice(eqIndex + 1).trim();
-          env[key] = value;
-        }
-      }
-    }
-  }
-
-  return env;
-}
+import { loadEnv } from "../utils/env";
 
 export async function run(taskDescription: string): Promise<void> {
   const env = loadEnv();

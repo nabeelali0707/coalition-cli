@@ -1,38 +1,6 @@
 import * as p from "@clack/prompts";
 import chalk from "chalk";
-import { readFileSync, writeFileSync, existsSync } from "fs";
-import { join } from "path";
-
-const ENV_PATH = join(process.cwd(), ".env");
-const ENV_EXAMPLE_PATH = join(process.cwd(), ".env.example");
-
-function loadEnv(): Record<string, string> {
-  const env: Record<string, string> = {};
-
-  if (existsSync(ENV_PATH)) {
-    const content = readFileSync(ENV_PATH, "utf-8");
-    for (const line of content.split("\n")) {
-      const trimmed = line.trim();
-      if (trimmed && !trimmed.startsWith("#")) {
-        const eqIndex = trimmed.indexOf("=");
-        if (eqIndex > 0) {
-          const key = trimmed.slice(0, eqIndex).trim();
-          const value = trimmed.slice(eqIndex + 1).trim();
-          env[key] = value;
-        }
-      }
-    }
-  }
-
-  return env;
-}
-
-function saveEnv(env: Record<string, string>): void {
-  const lines = Object.entries(env).map(
-    ([key, value]) => `${key}=${value}`
-  );
-  writeFileSync(ENV_PATH, lines.join("\n"), "utf-8");
-}
+import { loadEnv, saveEnv } from "../utils/env";
 
 export async function config(): Promise<void> {
   const env = loadEnv();
