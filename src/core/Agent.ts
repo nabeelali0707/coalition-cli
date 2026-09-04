@@ -14,24 +14,7 @@ import { OllamaClient } from "./OllamaClient";
 
 export type LLMClient = OpenRouterClient | OllamaClient;
 
-const SYSTEM_PROMPT = `You are Coalition, an autonomous terminal AI agent. You help users with software engineering tasks: fixing bugs, adding functionality, refactoring, and explaining code.
-
-You have access to the following tools to interact with the local file system and environment:
-- read_file: Read file contents
-- list_directory: List files in a directory
-- write_file: Create or overwrite a file (requires user approval)
-- edit_file: Edit a file by replacing content (requires user approval)
-- delete_file: Delete a file (requires user approval)
-- run_shell_command: Execute a shell command (requires user approval)
-- analyze_codebase: Analyze project structure
-- search_codebase: Search for patterns in files
-
-IMPORTANT SAFETY RULES:
-1. All file writes, edits, and deletes go through an approval flow - the user must approve before changes are applied.
-2. All shell commands require user approval before execution.
-3. Always explain what you're doing and why before requesting approvals.
-4. Prefer reading files first to understand the codebase before making changes.
-5. Be concise in your responses.`;
+const SYSTEM_PROMPT = `You are Coalition, a coding assistant. Be concise. Use tools when needed.`;
 
 export class Agent {
   private actionTracker: ActionTracker;
@@ -68,7 +51,7 @@ export class Agent {
     const tools = this.toolExecutor.getToolDefinitions();
     const llmTools = this.llm.formatToolDefinitions(tools);
 
-    let maxIterations = 10;
+    let maxIterations = 5;
 
     while (maxIterations > 0) {
       maxIterations--;
@@ -78,36 +61,65 @@ export class Agent {
       const completion = await this.llm.chat(this.messages, llmTools);
       const choice = completion.choices[0];
 
-      if (choice.message.content) {
-        console.log(chalk.cyan(`\nCoalition: ${choice.message.content}`));
-        this.messages.push({
-          role: "assistant",
-          content: choice.message.content,
-        });
+      // Parse tool calls from native API or from text content
+      let toolCalls = choice.message.tool_calls || [];
+      if (toolCalls.length === 0 && choice.message.content) {
+        toolCalls = this.parseTextToolCalls(choice.message.content);
       }
 
-      if (choice.message.tool_calls && choice.message.tool_calls.length > 0) {
+      if (toolCalls.length > 0) {
         if (task.status !== "in_progress") {
           this.actionTracker.updateStatus(task.id, "in_progress");
         }
 
+        // Print content before tool calls (skip if it's just a JSON tool call)
+        if (choice.message.content && toolCalls.length === 0) {
+          console.log(chalk.cyan(`\nCoalition: ${choice.message.content}`));
+        }
         this.messages.push({
           role: "assistant",
           content: null,
-          tool_calls: choice.message.tool_calls,
+          tool_calls: toolCalls,
         });
 
-        for (const toolCall of choice.message.tool_calls) {
+        for (const toolCall of toolCalls) {
           await this.handleToolCall(task.id, toolCall);
         }
       } else {
-        this.actionTracker.updateStatus(task.id, "in_progress");
+        if (choice.message.content) {
+          console.log(chalk.cyan(`\nCoalition: ${choice.message.content}`));
+          this.messages.push({
+            role: "assistant",
+            content: choice.message.content,
+          });
+        }
+        if (task.status !== "in_progress") {
+          this.actionTracker.updateStatus(task.id, "in_progress");
+        }
         break;
       }
     }
 
     this.actionTracker.updateStatus(task.id, "completed");
     console.log(chalk.green("\n[Task complete]"));
+  }
+
+  private parseTextToolCalls(content: string): ToolCall[] {
+    const toolCalls: ToolCall[] = [];
+    // Match JSON tool call patterns like {"name": "...", "arguments": {...}}
+    const regex = /\{\s*"name"\s*:\s*"([^"]+)"\s*,\s*"arguments"\s*:\s*(\{[^}]*\})\s*\}/g;
+    let match;
+    while ((match = regex.exec(content)) !== null) {
+      toolCalls.push({
+        id: `text-${Date.now()}-${toolCalls.length}`,
+        type: "function",
+        function: {
+          name: match[1],
+          arguments: match[2],
+        },
+      });
+    }
+    return toolCalls;
   }
 
   private async handleToolCall(taskId: string, toolCall: ToolCall): Promise<void> {

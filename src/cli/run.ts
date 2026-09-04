@@ -27,7 +27,7 @@ export async function run(taskDescription: string): Promise<void> {
   const env = loadEnv();
   const apiKey = env.OPENROUTER_API_KEY;
   const model = env.DEFAULT_MODEL || "openrouter/free";
-  const ollamaModel = env.OLLAMA_MODEL || "deepseek-coder:6.7b";
+  const ollamaModel = env.OLLAMA_MODEL || "qwen2.5-coder:7b";
 
   let llm: LLMClient;
 

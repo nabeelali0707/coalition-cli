@@ -11,7 +11,7 @@ export class OllamaClient {
   private baseUrl: string;
   private supportsTools: boolean | null = null;
 
-  constructor(model: string = "deepseek-coder:6.7b", baseUrl: string = "http://localhost:11434") {
+  constructor(model: string = "qwen2.5-coder:7b", baseUrl: string = "http://localhost:11434") {
     this.model = model;
     this.baseUrl = baseUrl;
   }

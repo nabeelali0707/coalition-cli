@@ -4,7 +4,7 @@ import { OllamaClient } from "../core/OllamaClient";
 
 export async function status(): Promise<void> {
   const env = loadEnv();
-  const ollamaModel = env.OLLAMA_MODEL || "deepseek-coder:6.7b";
+  const ollamaModel = env.OLLAMA_MODEL || "qwen2.5-coder:7b";
   const openrouterKey = env.OPENROUTER_API_KEY;
   const openrouterModel = env.DEFAULT_MODEL || "openrouter/free";
 

@@ -31,7 +31,7 @@ export async function config(): Promise<void> {
         `  OPENROUTER_API_KEY: ${env.OPENROUTER_API_KEY ? chalk.green("✓ Set") : chalk.red("✗ Not set")}`
       );
       console.log(`  DEFAULT_MODEL: ${chalk.cyan(env.DEFAULT_MODEL || "openrouter/free")}`);
-      console.log(`  OLLAMA_MODEL: ${chalk.cyan(env.OLLAMA_MODEL || "deepseek-coder:6.7b")}`);
+      console.log(`  OLLAMA_MODEL: ${chalk.cyan(env.OLLAMA_MODEL || "qwen2.5-coder:7b")}`);
       console.log(
         `  FIRECRAWL_API_KEY: ${env.FIRECRAWL_API_KEY ? chalk.green("✓ Set") : chalk.red("✗ Not set")}`
       );
@@ -42,7 +42,7 @@ export async function config(): Promise<void> {
     case "set-ollama-model": {
       const model = await p.text({
         message: "Enter the Ollama model name (primary backend):",
-        defaultValue: env.OLLAMA_MODEL || "deepseek-coder:6.7b",
+        defaultValue: env.OLLAMA_MODEL || "qwen2.5-coder:7b",
       });
 
       if (p.isCancel(model)) return;
